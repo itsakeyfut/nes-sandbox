@@ -2,6 +2,13 @@ fn main() {
     println!("Hello, world!");
 }
 
+const ZERO_FLAG: u8 = 0x02;
+const NEGATIVE_FLAG: u8 = 0x80;
+
+const LDA_OPCODE: u8 = 0xA9;
+const TAX_OPCODE: u8 = 0xAA;
+const BRK_OPCODE: u8 = 0x00;
+
 // A simple CPU struct to represent the state of a 6502-like CPU
 pub struct CPU {
     pub register_a: u8,
@@ -32,13 +39,13 @@ impl CPU {
 
     fn update_zero_and_negative_flags(&mut self, result: u8) {
         if result == 0 {
-            self.status |= 0b0000_0010; // Set zero flag
+            self.status |= ZERO_FLAG; // Set zero flag
         } else {
             self.status &= 0b1111_1101; // Clear zero flag
         }
 
-        if result & 0b1000_0000 != 0 {
-            self.status |= 0b1000_0000; // Set negative flag
+        if result & NEGATIVE_FLAG != 0 {
+            self.status |= NEGATIVE_FLAG; // Set negative flag
         } else {
             self.status &= 0b0111_1111; // Clear negative flag
         }
@@ -50,17 +57,17 @@ impl CPU {
 
         loop {
             let opscode = program[self.program_counter as usize];
-            self.program_counter += 1;
+            self.program_counter = self.program_counter.wrapping_add(1);
 
             match opscode {
-                0xA9 => { // LDA - Load Accumulator Immediate
+                LDA_OPCODE => { // LDA - Load Accumulator Immediate
                     let param = program[self.program_counter as usize];
-                    self.program_counter += 1;
+                    self.program_counter = self.program_counter.wrapping_add(1);
                     
                     self.lda(param);
                 }
-                0xAA => self.tax(), // TAX - Transfer Accumulator to X
-                0x00 => return, // BRK - Break
+                TAX_OPCODE => self.tax(), // TAX - Transfer Accumulator to X
+                BRK_OPCODE => return, // BRK - Break
                 _ => todo!("Implement opscode: {opscode:#X}"),
             }
         }
@@ -74,31 +81,31 @@ mod tests {
     #[test]
     fn test_0xa9_lda_immediate_load_data() {
         let mut cpu = CPU::new();
-        cpu.interpret(vec![0xa9, 0x05, 0x00]); // LDA #$05; BRK
+        cpu.interpret(vec![LDA_OPCODE, 0x05, 0x00]); // LDA #$05; BRK
         assert_eq!(cpu.register_a, 0x05);
-        assert!(cpu.status & 0b0000_0010 == 0b00); // Zero flag should be clear
-        assert!(cpu.status & 0b1000_0000 == 0); // Negative flag should be clear
+        assert!(cpu.status & ZERO_FLAG == 0x00); // Zero flag should be clear
+        assert!(cpu.status & NEGATIVE_FLAG == 0); // Negative flag should be clear
     }
 
     #[test]
     fn test_0xa9_lda_zero_flag() {
         let mut cpu = CPU::new();
-        cpu.interpret(vec![0xa9, 0x00, 0x00]); // LDA #$00; BRK
-        assert!(cpu.status & 0b0000_0010 == 0b10); // Zero flag should be set
+        cpu.interpret(vec![LDA_OPCODE, BRK_OPCODE, BRK_OPCODE]); // LDA #$00; BRK
+        assert!(cpu.status & ZERO_FLAG == ZERO_FLAG); // Zero flag should be set
     }
 
     #[test]
     fn test_0xa9_lda_negative_flag() {
         let mut cpu = CPU::new();
-        cpu.interpret(vec![0xa9, 0x80, 0x00]); // LDA #$80; BRK
-        assert!(cpu.status & 0b0100_0000 == 0); // Negative flag should be set
+        cpu.interpret(vec![LDA_OPCODE, NEGATIVE_FLAG, BRK_OPCODE]); // LDA #$80; BRK
+        assert!(cpu.status & NEGATIVE_FLAG == NEGATIVE_FLAG); // Negative flag should be set
     }
 
     #[test]
     fn test_0xaa_tax_transfer_a_to_x() {
         let mut cpu = CPU::new();
-        cpu.register_a = 10;
-        cpu.interpret(vec![0xaa, 0x00]); // TAX; BRK
-        assert_eq!(cpu.register_x, 10);
+        cpu.register_a = 0x0A;
+        cpu.interpret(vec![TAX_OPCODE, 0x00]); // TAX; BRK
+        assert_eq!(cpu.register_x, 0x0A);
     }
 }
