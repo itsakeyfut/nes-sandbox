@@ -66,18 +66,25 @@ impl CPU {
             self.program_counter = self.program_counter.wrapping_add(1);
 
             match opscode {
-                LDA_OPCODE => { // LDA - Load Accumulator Immediate
+                LDA_OPCODE => {
+                    // LDA - Load Accumulator Immediate
                     let param = program[self.program_counter as usize];
                     self.program_counter = self.program_counter.wrapping_add(1);
-                    
+
                     self.lda(param);
                 }
                 TAX_OPCODE => self.tax(), // TAX - Transfer Accumulator to X
                 INX_OPCODE => self.inx(), // INX - Increment X Register
-                BRK_OPCODE => return, // BRK - Break
+                BRK_OPCODE => return,     // BRK - Break
                 _ => todo!("Implement opscode: {opscode:#X}"),
             }
         }
+    }
+}
+
+impl Default for CPU {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
