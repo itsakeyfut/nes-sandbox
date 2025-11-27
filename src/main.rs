@@ -5,6 +5,7 @@ fn main() {
 // A simple CPU struct to represent the state of a 6502-like CPU
 pub struct CPU {
     pub register_a: u8,
+    pub register_x: u8,
     pub status: u8,
     pub program_counter: u16,
 }
@@ -13,6 +14,7 @@ impl CPU {
     pub fn new() -> Self {
         CPU {
             register_a: 0,
+            register_x: 0,
             status: 0,
             program_counter: 0,
         }
@@ -39,6 +41,21 @@ impl CPU {
                     }
 
                     if self.register_a & 0b1000_0000 != 0 {
+                        self.status |= 0b1000_0000; // Set negative flag
+                    } else {
+                        self.status &= 0b0111_1111; // Clear negative flag
+                    }
+                }
+                0xAA => { // TAX - Transfer Accumulator to X
+                    self.register_x = self.register_a;
+                    
+                    if self.register_x == 0 {
+                        self.status |= 0b0000_0010; // Set zero flag
+                    } else {
+                        self.status &= 0b1111_1101; // Clear zero flag
+                    }
+
+                    if self.register_x & 0b1000_0000 != 0 {
                         self.status |= 0b1000_0000; // Set negative flag
                     } else {
                         self.status &= 0b0111_1111; // Clear negative flag
@@ -76,5 +93,13 @@ mod tests {
         let mut cpu = CPU::new();
         cpu.interpret(vec![0xa9, 0x80, 0x00]); // LDA #$80; BRK
         assert!(cpu.status & 0b0100_0000 == 0); // Negative flag should be set
+    }
+
+    #[test]
+    fn test_0xaa_tax_transfer_a_to_x() {
+        let mut cpu = CPU::new();
+        cpu.register_a = 10;
+        cpu.interpret(vec![0xaa, 0x00]); // TAX; BRK
+        assert_eq!(cpu.register_x, 10)
     }
 }
