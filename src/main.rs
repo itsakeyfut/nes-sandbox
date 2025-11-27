@@ -7,6 +7,7 @@ const NEGATIVE_FLAG: u8 = 0x80;
 
 const LDA_OPCODE: u8 = 0xA9;
 const TAX_OPCODE: u8 = 0xAA;
+const INX_OPCODE: u8 = 0xE8;
 const BRK_OPCODE: u8 = 0x00;
 
 // A simple CPU struct to represent the state of a 6502-like CPU
@@ -34,6 +35,11 @@ impl CPU {
 
     fn tax(&mut self) {
         self.register_x = self.register_a;
+        self.update_zero_and_negative_flags(self.register_x);
+    }
+
+    fn inx(&mut self) {
+        self.register_x = self.register_x.wrapping_add(1);
         self.update_zero_and_negative_flags(self.register_x);
     }
 
@@ -67,6 +73,7 @@ impl CPU {
                     self.lda(param);
                 }
                 TAX_OPCODE => self.tax(), // TAX - Transfer Accumulator to X
+                INX_OPCODE => self.inx(), // INX - Increment X Register
                 BRK_OPCODE => return, // BRK - Break
                 _ => todo!("Implement opscode: {opscode:#X}"),
             }
@@ -107,5 +114,20 @@ mod tests {
         cpu.register_a = 0x0A;
         cpu.interpret(vec![TAX_OPCODE, 0x00]); // TAX; BRK
         assert_eq!(cpu.register_x, 0x0A);
+    }
+
+    #[test]
+    fn test_5_ops_working_together() {
+        let mut cpu = CPU::new();
+        cpu.interpret(vec![LDA_OPCODE, 0xc0, TAX_OPCODE, INX_OPCODE, BRK_OPCODE]); // LDA #$C0; TAX; INX; BRK
+        assert_eq!(cpu.register_x, 0xc1);
+    }
+
+    #[test]
+    fn test_inx_overflow() {
+        let mut cpu = CPU::new();
+        cpu.register_x = 0xFF;
+        cpu.interpret(vec![INX_OPCODE, INX_OPCODE, BRK_OPCODE]); // INX; INX; BRK
+        assert_eq!(cpu.register_x, 1);
     }
 }
