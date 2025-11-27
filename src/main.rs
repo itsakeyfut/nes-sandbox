@@ -88,7 +88,7 @@ mod tests {
     #[test]
     fn test_0xa9_lda_immediate_load_data() {
         let mut cpu = CPU::new();
-        cpu.interpret(vec![LDA_OPCODE, 0x05, 0x00]); // LDA #$05; BRK
+        cpu.interpret(vec![LDA_OPCODE, 0x05, BRK_OPCODE]); // LDA #$05; BRK
         assert_eq!(cpu.register_a, 0x05);
         assert!(cpu.status & ZERO_FLAG == 0x00); // Zero flag should be clear
         assert!(cpu.status & NEGATIVE_FLAG == 0); // Negative flag should be clear
@@ -112,7 +112,7 @@ mod tests {
     fn test_0xaa_tax_transfer_a_to_x() {
         let mut cpu = CPU::new();
         cpu.register_a = 0x0A;
-        cpu.interpret(vec![TAX_OPCODE, 0x00]); // TAX; BRK
+        cpu.interpret(vec![TAX_OPCODE, BRK_OPCODE]); // TAX; BRK
         assert_eq!(cpu.register_x, 0x0A);
     }
 
